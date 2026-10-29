@@ -1,42 +1,76 @@
-# Python-generated files
+# ==========================================
+# Python & Bytecode
+# ==========================================
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
 *.egg
 
-# Virtual environments
+# ==========================================
+# Entornos Virtuales (uv, venv, conda, etc.)
+# ==========================================
 .venv/
 venv/
 env/
 ENV/
+env.bak/
+venv.bak/
 
-# Django specific
+# ==========================================
+# Django & Archivos de Aplicación
+# ==========================================
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-media/
-static/
 
-# Testing
+# Archivos estáticos recolectados en producción (collectstatic)
+staticfiles/
+
+# Archivos multimedia subidos por usuarios (PDFs y portadas)
+# Mantenemos las carpetas vacías en el repo mediante .gitkeep
+media/*
+!media/covers/
+media/covers/*
+!media/covers/.gitkeep
+!media/pdfs/
+media/pdfs/*
+!media/pdfs/.gitkeep
+
+# ==========================================
+# Pruebas & Cobertura (Testing caches & artifacts)
+# ==========================================
 .pytest_cache/
-htmlcov/
 .coverage
+.coverage.*
+htmlcov/
 .tox/
+.nox/
 
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# IDE / Editor
+# ==========================================
+# IDEs & Editores
+# ==========================================
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
 
-# Environment variables
+# ==========================================
+# Sistema Operativo
+# ==========================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==========================================
+# Variables de Entorno / Secretos
+# ==========================================
 .env
-.env.local
+.env.*
+!.env.example
