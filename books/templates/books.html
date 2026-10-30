@@ -1,48 +1,47 @@
 {% extends "base.html" %}
 {% block content %}
 
-
 <div class="d-flex p-2 justify-content-center flex-wrap flex-column">
     <div class="d-flex p-2 justify-content-center">
         <h1 class="p-2">Library</h1>
     </div>
     <div class="d-flex album py-5 pagebg ">
         <div class="container-fluid">
-            <!--<ul>-->
-
             <div class="row">
                     
                     {% for book in books %}
                 <div class="col">  
                     <div class="card mb-4 box-shadow shadow" style="width: 100%">
                         <div class="card-body shadow">
-                            {% comment %} <li> {% endcomment %}
                                 <a class="card-text" href="{% url 'book_detail' book.id %}" style="text-decoration: none;">
                                     {% if book.cover %}
                                         <img src="{{ book.cover.url }}" alt="{{ book.title }}" class="img-fluid rounded mb-2" style="max-height: 200px; object-fit: cover; width: 100%;">
                                     {% endif %}
                                     <strong class="text-dark"> {{book.title}} </strong>
                                     <p class="card-text text-dark">{{book.autor}}</p>
+                                    {% if book.category %}
+                                        <span class="badge badge-info mb-1" style="font-size: 0.7rem;">{{ book.category }}</span>
+                                    {% endif %}
+                                    {% if book.average_rating %}
+                                        <span class="badge badge-warning mb-1" style="font-size: 0.7rem;">⭐ {{ book.average_rating }}</span>
+                                    {% endif %}
                                     {% if book.goal %}
                                         <p class="card-text text-dark">Goal: {{book.goal|date:'j/M/Y'}}</p>
                                     {% endif %}
                                     {% if book.date_completed %}
-                                        <p class="card-text text-dark">{{ book.date_completed|date:'j/M/Y' }}</p>
+                                        <p class="card-text text-dark">✅ {{ book.date_completed|date:'j/M/Y' }}</p>
                                     {% endif %}
                                     <p class="card-text text-dark">{{book.pages_read}} de {{book.pages_total}}</p>
                                     <div class= "progress" >
                                         <div style="width: {{book.progress}}%" class="progress-bar" role="progressbar" aria-valuenow="{{book.progress}}" aria-valuemin="0" aria-valuemax="100"></div>
-                                        {% comment %} <p class="card-text text-dark">{{book.progress}}%</p> {% endcomment %}
                                     </div>      
                                 </a>
-                            {% comment %} </li> {% endcomment %}
                         </div>
                     </div>
                 </div>
                     {% endfor %}
                 
             </div>
-            <!--</ul>-->
         </div>
     </div>
 </div>

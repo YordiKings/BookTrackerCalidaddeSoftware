@@ -2,13 +2,13 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.utils import timezone
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 
 # Create your models here.
 class Book(models.Model):
-    title = models.CharField(max_length=50)
-    autor = models.CharField(max_length=50)
+    title = models.CharField(max_length=200)
+    autor = models.CharField(max_length=200)
     goal = models.DateField(null=True, blank=True)
     pages_read = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     pages_total = models.IntegerField(validators=[MinValueValidator(1)])
@@ -16,11 +16,23 @@ class Book(models.Model):
     date_completed = models.DateField(null=True, blank=True, default=None)
     user =  models.ForeignKey(User, on_delete=models.CASCADE)
     
-    # Nuevos campos para Milestone 1
+    # Campos multimedia
     cover = models.ImageField(upload_to='covers/', null=True, blank=True)
     pdf_file = models.FileField(upload_to='pdfs/', null=True, blank=True)
+
+    # Campos de Google Books API
     google_books_id = models.CharField(max_length=50, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
+    category = models.CharField(max_length=200, null=True, blank=True)
+    isbn = models.CharField(max_length=20, null=True, blank=True)
+    publisher = models.CharField(max_length=200, null=True, blank=True)
+    published_date = models.CharField(max_length=20, null=True, blank=True)
+    average_rating = models.FloatField(null=True, blank=True)
+    ratings_count = models.IntegerField(null=True, blank=True)
+    preview_link = models.URLField(max_length=500, null=True, blank=True)
+
+    # Notas personales del usuario
+    user_notes = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return self.title
@@ -66,3 +78,53 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
         Profile.objects.create(user=instance)
     else:
         instance.profile.save()
+
+@receiver(post_delete, sender=Book)
+def delete_book_files_on_delete(sender, instance, **kwargs):
+    """
+    Elimina físicamente los archivos de portada y PDF del almacenamiento
+    cuando el libro es eliminado por el usuario.
+    """
+    if instance.cover:
+        try:
+            if instance.cover.storage.exists(instance.cover.name):
+                instance.cover.storage.delete(instance.cover.name)
+        except Exception:
+            pass
+
+    if instance.pdf_file:
+        try:
+            if instance.pdf_file.storage.exists(instance.pdf_file.name):
+                instance.pdf_file.storage.delete(instance.pdf_file.name)
+        except Exception:
+            pass
+
+@receiver(pre_save, sender=Book)
+def delete_old_files_on_update(sender, instance, **kwargs):
+    """
+    Si el usuario reemplaza una portada o un PDF por un archivo nuevo,
+    elimina el archivo viejo del disco para evitar que se acumule basura.
+    """
+    if not instance.pk:
+        return  # Libro nuevo, no hay archivo previo
+
+    try:
+        old_book = Book.objects.get(pk=instance.pk)
+    except Book.DoesNotExist:
+        return
+
+    # Si se reemplazó la portada anterior por otra nueva
+    if old_book.cover and old_book.cover != instance.cover:
+        try:
+            if old_book.cover.storage.exists(old_book.cover.name):
+                old_book.cover.storage.delete(old_book.cover.name)
+        except Exception:
+            pass
+
+    # Si se reemplazó el archivo PDF anterior por otro nuevo
+    if old_book.pdf_file and old_book.pdf_file != instance.pdf_file:
+        try:
+            if old_book.pdf_file.storage.exists(old_book.pdf_file.name):
+                old_book.pdf_file.storage.delete(old_book.pdf_file.name)
+        except Exception:
+            pass

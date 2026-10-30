@@ -8,9 +8,10 @@ from .models import Book
 class BookForm(ModelForm):
     class Meta:
         model = Book
-        fields = ['title', 'autor', 'goal', 'pages_read', 'pages_total', 'cover', 'pdf_file']
+        fields = ['title', 'autor', 'goal', 'pages_read', 'pages_total', 'cover', 'pdf_file', 'user_notes']
         widgets = {
             'goal': forms.DateInput(attrs={'type': 'date'}),
+            'user_notes': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Escribe tus notas, citas favoritas o reseña personal aquí...'}),
         }
     def __init__(self, *args, **kwargs):
         super(BookForm, self).__init__(*args, **kwargs)
@@ -21,6 +22,8 @@ class BookForm(ModelForm):
         self.fields['pages_total'].widget.attrs['class'] = 'form-control'
         self.fields['cover'].widget.attrs['class'] = 'form-control'
         self.fields['pdf_file'].widget.attrs['class'] = 'form-control'
+        self.fields['user_notes'].widget.attrs['class'] = 'form-control'
+        self.fields['user_notes'].label = 'Notas personales / Reseña'
         
 class SignUpForm(UserCreationForm):
     class Meta:

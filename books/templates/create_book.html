@@ -1,17 +1,301 @@
 {% extends "base.html" %}
 {% block content %}
 
-
-<div class = "d-flex flex-column justify-content-center flex-wrap rounded">
+<div class="d-flex flex-column justify-content-center flex-wrap rounded" style="width: 100%; max-width: 900px;">
     <div class="d-flex p-2 justify-content-center">
         <h1>Create Book</h1>
     </div>
-    <div class = "p-2 rounded formOutline" style=" background-color:#FFFFFF">
+
+    <!-- Buscador Interactivo de Libros -->
+    <div class="p-3 mb-3 rounded formOutline" style="background-color:#FFFFFF">
+        <h5>🔍 Buscar Libro en Línea <small class="text-muted">(Google Books / Catálogo Abierto)</small></h5>
+        <p class="text-muted" style="font-size: 0.85rem;">Escribe el título o autor para buscar portadas, número de páginas, géneros y sinopsis oficiales.</p>
+        <div class="input-group mb-2">
+            <input type="text" id="gbSearchInput" class="form-control" placeholder="Ej: El principito, Cien años de soledad, Clean Code...">
+            <div class="input-group-append">
+                <button class="btn btn-outline-secondary" type="button" id="gbSearchBtn">Buscar</button>
+            </div>
+        </div>
+        <div id="gbSearchSpinner" class="text-center d-none my-2">
+            <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                <span class="sr-only">Buscando...</span>
+            </div>
+            <span class="text-muted ml-2">Buscando información del libro...</span>
+        </div>
+        <div id="gbResults" class="mt-2"></div>
+    </div>
+
+    <!-- Formulario de creación -->
+    <div class="p-3 rounded formOutline" style="background-color:#FFFFFF">
+        {% if error %}
+            <div class="alert alert-danger" role="alert">{{ error }}</div>
+        {% endif %}
+
+        <!-- Previsualización de portada seleccionada -->
+        <div id="gbPreview" class="d-none text-center mb-3 p-3" style="background: #f8f9fa; border-radius: 8px;">
+            <div class="d-flex justify-content-center align-items-center mb-2">
+                <img id="gbPreviewImg" src="" alt="Portada" style="max-height: 180px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.15);">
+            </div>
+            <div>
+                <span class="badge badge-success" id="gbPreviewSource"></span>
+                <span class="badge badge-info" id="gbPreviewCategory"></span>
+                <span class="badge badge-secondary" id="gbPreviewPublisher"></span>
+                <span class="badge badge-warning" id="gbPreviewRating"></span>
+            </div>
+            <p class="text-muted mt-2 mb-0" style="font-size: 0.82rem;" id="gbPreviewDesc"></p>
+            <button type="button" class="btn btn-sm btn-outline-danger mt-2" id="gbClearSelection">✕ Deseleccionar</button>
+        </div>
+
         <form action="/books/create/" method="POST" enctype="multipart/form-data">
             {% csrf_token %}
-            {{error}}
-            {{form.as_p}}
-            <button type="submit" class="formButtonColor btn btn-secondary btn-block ">Submit</button>
+            <!-- Campos ocultos para metadatos automáticos -->
+            <input type="hidden" name="google_books_id" id="googleBooksId" value="">
+            <input type="hidden" name="selected_cover_url" id="selectedCoverUrl" value="">
+            <input type="hidden" name="selected_description" id="selectedDescription" value="">
+            <input type="hidden" name="selected_category" id="selectedCategory" value="">
+            <input type="hidden" name="selected_publisher" id="selectedPublisher" value="">
+            <input type="hidden" name="selected_published_date" id="selectedPublishedDate" value="">
+            <input type="hidden" name="selected_isbn" id="selectedIsbn" value="">
+            <input type="hidden" name="selected_rating" id="selectedRating" value="">
+            <input type="hidden" name="selected_preview_link" id="selectedPreviewLink" value="">
+
+            {{ form.as_p }}
+
+            <button type="submit" class="formButtonColor btn btn-secondary btn-block">Crear Libro</button>
         </form>
     </div>
+</div>
+
+<style>
+    .gb-result-card {
+        cursor: pointer;
+        border: 2px solid #e9ecef;
+        transition: all 0.2s ease;
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 8px;
+        background: #f8f9fa;
+    }
+    .gb-result-card:hover {
+        border-color: #DCBD9E;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .gb-result-card.selected {
+        border-color: #28a745;
+        background: #f0fff0;
+    }
+    .gb-result-cover {
+        width: 60px;
+        height: 85px;
+        object-fit: cover;
+        border-radius: 4px;
+        flex-shrink: 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .gb-no-cover {
+        width: 60px;
+        height: 85px;
+        background: #e2e3e5;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #6c757d;
+        flex-shrink: 0;
+    }
+    .gb-result-info {
+        margin-left: 12px;
+        overflow: hidden;
+        flex-grow: 1;
+    }
+    .gb-result-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 2px;
+        color: #212529;
+    }
+    .gb-result-author {
+        font-size: 0.85rem;
+        color: #495057;
+    }
+    .gb-result-meta {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 4px;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('gbSearchInput');
+    const searchBtn = document.getElementById('gbSearchBtn');
+    const resultsDiv = document.getElementById('gbResults');
+    const spinner = document.getElementById('gbSearchSpinner');
+    const preview = document.getElementById('gbPreview');
+    const previewImg = document.getElementById('gbPreviewImg');
+    const previewSource = document.getElementById('gbPreviewSource');
+    const previewCategory = document.getElementById('gbPreviewCategory');
+    const previewPublisher = document.getElementById('gbPreviewPublisher');
+    const previewRating = document.getElementById('gbPreviewRating');
+    const previewDesc = document.getElementById('gbPreviewDesc');
+    const clearBtn = document.getElementById('gbClearSelection');
+
+    // Campos ocultos
+    const hiddenGbId = document.getElementById('googleBooksId');
+    const hiddenCoverUrl = document.getElementById('selectedCoverUrl');
+    const hiddenDesc = document.getElementById('selectedDescription');
+    const hiddenCat = document.getElementById('selectedCategory');
+    const hiddenPub = document.getElementById('selectedPublisher');
+    const hiddenDate = document.getElementById('selectedPublishedDate');
+    const hiddenIsbn = document.getElementById('selectedIsbn');
+    const hiddenRating = document.getElementById('selectedRating');
+    const hiddenPreview = document.getElementById('selectedPreviewLink');
+
+    // Campos del formulario
+    const titleField = document.getElementById('id_title');
+    const autorField = document.getElementById('id_autor');
+    const pagesTotalField = document.getElementById('id_pages_total');
+
+    let searchTimeout;
+
+    function doSearch() {
+        const query = searchInput.value.trim();
+        if (query.length < 2) {
+            resultsDiv.innerHTML = '<p class="text-muted">Escribe al menos 2 caracteres para buscar.</p>';
+            return;
+        }
+        spinner.classList.remove('d-none');
+        resultsDiv.innerHTML = '';
+
+        fetch(`/api/search-books/?q=${encodeURIComponent(query)}`)
+            .then(r => r.json())
+            .then(data => {
+                spinner.classList.add('d-none');
+                if (!data.results || data.results.length === 0) {
+                    resultsDiv.innerHTML = '<p class="text-muted">No se encontraron resultados automáticos. Puedes llenar los campos manualmente abajo.</p>';
+                    return;
+                }
+                let html = '<p class="text-muted mb-2" style="font-size:0.85rem;">👇 Haz clic en tu edición para autocompletar portada y datos:</p>';
+                data.results.forEach(function(book, idx) {
+                    const coverHtml = book.cover_url
+                        ? `<img src="${book.cover_url}" class="gb-result-cover" alt="Portada">`
+                        : `<div class="gb-no-cover">📖</div>`;
+                    const rating = book.average_rating
+                        ? `⭐ ${book.average_rating}/5`
+                        : '';
+                    const pages = book.page_count ? `${book.page_count} págs.` : '';
+                    const meta = [book.source, book.categories, book.publisher, pages, rating].filter(Boolean).join(' · ');
+
+                    html += `
+                        <div class="gb-result-card d-flex align-items-start" id="gbCard${idx}">
+                            ${coverHtml}
+                            <div class="gb-result-info">
+                                <div class="gb-result-title">${book.title}</div>
+                                <div class="gb-result-author">${book.authors || 'Autor desconocido'}</div>
+                                <div class="gb-result-meta">${meta}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                resultsDiv.innerHTML = html;
+
+                // Event listener a cada tarjeta
+                data.results.forEach(function(book, idx) {
+                    const el = document.getElementById(`gbCard${idx}`);
+                    if (el) {
+                        el.addEventListener('click', function() {
+                            selectBook(book);
+                            document.querySelectorAll('.gb-result-card').forEach(c => c.classList.remove('selected'));
+                            this.classList.add('selected');
+                        });
+                    }
+                });
+            })
+            .catch(err => {
+                spinner.classList.add('d-none');
+                resultsDiv.innerHTML = '<p class="text-danger">Error consultando catálogo. Puedes ingresar los datos manualmente.</p>';
+            });
+    }
+
+    function selectBook(book) {
+        // Rellenar campos del formulario
+        if (titleField) titleField.value = book.title || '';
+        if (autorField) autorField.value = book.authors || '';
+        if (pagesTotalField && book.page_count) pagesTotalField.value = book.page_count;
+
+        // Rellenar campos ocultos para el guardado
+        hiddenGbId.value = book.google_books_id || '';
+        hiddenCoverUrl.value = book.cover_url || '';
+        hiddenDesc.value = book.description || '';
+        hiddenCat.value = book.categories || '';
+        hiddenPub.value = book.publisher || '';
+        hiddenDate.value = book.published_date || '';
+        hiddenIsbn.value = book.isbn || '';
+        hiddenRating.value = book.average_rating || '';
+        hiddenPreview.value = book.preview_link || '';
+
+        // Mostrar previsualización
+        if (book.cover_url) {
+            previewImg.src = book.cover_url;
+            previewImg.classList.remove('d-none');
+        } else {
+            previewImg.classList.add('d-none');
+        }
+        preview.classList.remove('d-none');
+
+        previewSource.textContent = book.source || 'En línea';
+        previewCategory.textContent = book.categories || '';
+        previewCategory.classList.toggle('d-none', !book.categories);
+        previewPublisher.textContent = book.publisher || '';
+        previewPublisher.classList.toggle('d-none', !book.publisher);
+        if (book.average_rating) {
+            previewRating.textContent = `⭐ ${book.average_rating}/5`;
+            previewRating.classList.remove('d-none');
+        } else {
+            previewRating.classList.add('d-none');
+        }
+        const desc = book.description || '';
+        previewDesc.textContent = desc.length > 220 ? desc.substring(0, 220) + '...' : desc;
+    }
+
+    clearBtn.addEventListener('click', function() {
+        hiddenGbId.value = '';
+        hiddenCoverUrl.value = '';
+        hiddenDesc.value = '';
+        hiddenCat.value = '';
+        hiddenPub.value = '';
+        hiddenDate.value = '';
+        hiddenIsbn.value = '';
+        hiddenRating.value = '';
+        hiddenPreview.value = '';
+
+        preview.classList.add('d-none');
+        document.querySelectorAll('.gb-result-card').forEach(c => c.classList.remove('selected'));
+        if (titleField) titleField.value = '';
+        if (autorField) autorField.value = '';
+        if (pagesTotalField) pagesTotalField.value = '';
+    });
+
+    searchBtn.addEventListener('click', doSearch);
+
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            doSearch();
+        }
+    });
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            if (searchInput.value.trim().length >= 3) {
+                doSearch();
+            }
+        }, 500);
+    });
+});
+</script>
+
 {% endblock %}

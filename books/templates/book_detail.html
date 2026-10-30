@@ -1,79 +1,464 @@
 {% extends "base.html" %}
 {% block content %}
 
+<!-- PDF.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-<div class = "d-flex flex-column justify-content-center flex-wrap rounded">
-    <div class="d-flex p-2 justify-content-center">
-        <h1>{{book.title}}</h1>
-        {{error}}
+<div class="d-flex flex-column justify-content-center flex-wrap rounded" style="width: 100%; max-width: 1150px;">
+    <div class="d-flex p-2 justify-content-center align-items-center">
+        <h1 class="mr-3">{{ book.title }}</h1>
+        <span id="completedBadge" class="badge badge-success px-3 py-2" style="font-size: 0.9rem; {% if not book.date_completed %}display: none;{% endif %}">
+            ✅ Libro Completado {% if book.date_completed %}({{ book.date_completed|date:'d/M/Y' }}){% endif %}
+        </span>
     </div>
+    {% if error %}
+        <div class="alert alert-danger text-center" role="alert">{{ error }}</div>
+    {% endif %}
+
     <div class="row w-100">
-        <!-- Columna de Detalles y Edición -->
-        <div class="col-md-6">
-            {% if book.cover %}
-                <div class="text-center mb-3">
-                    <img src="{{ book.cover.url }}" alt="Portada de {{ book.title }}" style="max-height: 250px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+        <!-- Columna izquierda: Info del libro, progreso y formulario -->
+        <div class="col-md-5">
+
+            <!-- Barra de Progreso Dinámica -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-1" style="font-size: 0.95rem;">
+                        <strong>Progreso de Lectura:</strong>
+                        <span>
+                            <span id="displayPagesRead" class="font-weight-bold">{{ book.pages_read }}</span> de 
+                            <span id="displayPagesTotal" class="font-weight-bold">{{ book.pages_total }}</span> págs. 
+                            (<span id="displayProgressPercent" class="font-weight-bold text-success">{{ book.progress }}</span>%)
+                        </span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" 
+                             style="width: {{ book.progress }}%; font-weight: bold;" 
+                             aria-valuenow="{{ book.progress }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ book.progress }}%
+                        </div>
+                    </div>
                 </div>
-            {% endif %}
+            </div>
+
+            <!-- Portada y Ficha Técnica -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-body text-center">
+                    {% if book.cover %}
+                        <img src="{{ book.cover.url }}" alt="Portada de {{ book.title }}" 
+                             style="max-height: 220px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.15);" class="mb-3">
+                    {% endif %}
+
+                    <!-- Metadatos bibliográficos -->
+                    <div class="text-left" style="font-size: 0.9rem;">
+                        <p class="mb-1"><strong>✍️ Autor:</strong> {{ book.autor }}</p>
+                        {% if book.category %}
+                            <p class="mb-1"><strong>📂 Género:</strong> <span class="badge badge-info">{{ book.category }}</span></p>
+                        {% endif %}
+                        {% if book.publisher %}
+                            <p class="mb-1"><strong>🏢 Editorial:</strong> {{ book.publisher }}</p>
+                        {% endif %}
+                        {% if book.published_date %}
+                            <p class="mb-1"><strong>📅 Publicado:</strong> {{ book.published_date }}</p>
+                        {% endif %}
+                        {% if book.isbn %}
+                            <p class="mb-1"><strong>📋 ISBN:</strong> <code>{{ book.isbn }}</code></p>
+                        {% endif %}
+                        {% if book.average_rating %}
+                            <p class="mb-1"><strong>⭐ Calificación:</strong> {{ book.average_rating }}/5
+                                {% if book.ratings_count %}
+                                    <small class="text-muted">({{ book.ratings_count }} votos)</small>
+                                {% endif %}
+                            </p>
+                        {% endif %}
+                        {% if book.preview_link %}
+                            <p class="mb-1 mt-2">
+                                <a href="{{ book.preview_link }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                    📖 Ver muestra oficial en línea
+                                </a>
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
             {% if book.description %}
-                <div class="mb-3">
-                    <strong>Descripción:</strong>
-                    <p class="text-muted" style="font-size: 0.9rem;">{{ book.description }}</p>
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-light"><strong>📝 Sinopsis Oficial</strong></div>
+                    <div class="card-body py-2">
+                        <p class="text-muted mb-0" style="font-size: 0.85rem; max-height: 150px; overflow-y: auto;">{{ book.description }}</p>
+                    </div>
                 </div>
             {% endif %}
 
-            <form method="POST" enctype="multipart/form-data">
-                {% csrf_token %}
-                {{form.as_p}}
+            <!-- Formulario de edición -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light"><strong>✏️ Datos y Metas de Lectura</strong></div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" id="editBookForm">
+                        {% csrf_token %}
+                        {{ form.as_p }}
 
-                <table class="table table-bordered mt-3">
-                    <thead>
-                    <tr>
-                        <th scope="col">Dias de lectura</th>
-                        <th scope="col">Paginas a leer por dia</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for dia, paginas in book.pages_for_day %}
-                        <tr>
-                            <td>{{ dia }}</td>
-                            <td>{{ paginas }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                        <h6 class="mt-3 mb-1">📅 Ritmo de Lectura Recomendado</h6>
+                        <table class="table table-sm table-bordered mt-2 text-center" style="font-size: 0.85rem;">
+                            <thead class="thead-light">
+                            <tr>
+                                <th scope="col">Días restantes</th>
+                                <th scope="col">Páginas por día</th>
+                            </tr>
+                            </thead>
+                            <tbody id="pagesForDayTableBody">
+                            {% for dia, paginas in book.pages_for_day %}
+                                <tr>
+                                    <td>{{ dia }} día{{ dia|pluralize }}</td>
+                                    <td><strong>{{ paginas }}</strong> pág/día</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
 
-                <button type="submit" class="updateButtonColor btn btn-secondary btn-block buttonMargin">Update Book</button>
-            </form>
+                        <button type="submit" class="updateButtonColor btn btn-secondary btn-block buttonMargin">Guardar Cambios Manuales</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="d-flex mb-3">
+                <form action="{% url 'complete_book' book.id %}" method="POST" class="mr-2">
+                    {% csrf_token %}
+                    <button type="submit" class="completeButtonColor btn btn-secondary buttonMargin">Marcar como Completado</button>
+                </form>
+                <form action="{% url 'delete_book' book.id %}" method="POST" onsubmit="return confirm('¿Estás seguro de eliminar este libro? Sus archivos asociados se borrarán del disco.');">
+                    {% csrf_token %}
+                    <button type="submit" class="deleteButtonColor btn btn-secondary buttonMargin">Eliminar Libro</button>
+                </form>
+            </div>
         </div>
 
-        <!-- Columna del Visor PDF -->
-        <div class="col-md-6">
+        <!-- Columna derecha: Visor PDF Interactivo + Notas Personales -->
+        <div class="col-md-7">
             {% if book.pdf_file %}
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0">Visor PDF</h5>
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-dark text-white p-2">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap">
+                            <span class="font-weight-bold" style="font-size: 0.95rem;">📄 Visor PDF Interactivo</span>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-secondary" id="pdfPrevBtn" title="Página anterior">◀ Anterior</button>
+                                <span class="input-group-text bg-dark text-white border-0 py-0 px-2" style="font-size: 0.85rem;">
+                                    Pág. <input type="number" id="pdfCurrentPageInput" min="1" value="{{ book.pages_read|default:1 }}" style="width: 50px; text-align: center; height: 26px; border-radius: 3px; border: 1px solid #777; margin: 0 4px; font-weight: bold;"> de <span id="pdfTotalPagesDisplay" class="ml-1">--</span>
+                                </span>
+                                <button type="button" class="btn btn-secondary" id="pdfNextBtn" title="Página siguiente">Siguiente ▶</button>
+                            </div>
+                            <div class="btn-group btn-group-sm mt-1 mt-md-0">
+                                <button type="button" class="btn btn-outline-light" id="pdfZoomOutBtn" title="Alejar">−</button>
+                                <button type="button" class="btn btn-outline-light" id="pdfZoomInBtn" title="Acercar">+</button>
+                                <button type="button" class="btn btn-outline-light" id="pdfZoomFitBtn" title="Ajustar al ancho">Ajustar</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body p-0" style="height: 600px;">
-                        <iframe src="{{ book.pdf_file.url }}" width="100%" height="100%" style="border: none;">
-                            Este navegador no soporta PDFs. <a href="{{ book.pdf_file.url }}">Descargar el PDF</a>.
-                        </iframe>
+
+                    <!-- Alertas e indicadores de sincronización -->
+                    <div id="pdfSyncInfoAlert" class="alert alert-info py-1 px-3 m-2 text-center mb-0" style="font-size: 0.8rem; display: none;"></div>
+                    
+                    <div class="d-flex justify-content-between align-items-center px-3 py-1 bg-light border-bottom" style="font-size: 0.8rem;">
+                        <span class="text-muted">Desplázate con los botones o flechas del teclado (◀ / ▶)</span>
+                        <span id="pdfSyncBadge" class="badge badge-success py-1 px-2" style="display: none;">
+                            ✓ Progreso sincronizado (Pág. <span id="pdfSavedPageNum"></span>)
+                        </span>
+                    </div>
+
+                    <!-- Contenedor del documento PDF renderizado -->
+                    <div id="pdfViewerContainer" style="overflow: auto; max-height: 650px; min-height: 480px; background-color: #525659; text-align: center; padding: 12px; position: relative;">
+                        <div id="pdfLoadingSpinner" class="text-white py-5">
+                            <div class="spinner-border text-light" role="status"></div>
+                            <p class="mt-3 mb-0">Cargando documento PDF...</p>
+                        </div>
+                        <canvas id="pdfCanvas" style="box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-radius: 4px; display: none; margin: 0 auto;"></canvas>
+                    </div>
+
+                    <div class="card-footer py-2 bg-light d-flex justify-content-between align-items-center">
+                        <small class="text-muted">El avance de lectura se guarda automáticamente al cambiar de página.</small>
+                        <a href="{{ book.pdf_file.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                            Abrir archivo original ↗
+                        </a>
                     </div>
                 </div>
             {% else %}
-                <div class="alert alert-info mt-4" role="alert">
-                    No has subido un archivo PDF para este libro aún.
+                <div class="alert alert-info mb-3" role="alert">
+                    <h5>📄 Sin archivo PDF adjunto</h5>
+                    <p class="mb-0">Para leer interactivamente y sincronizar automáticamente las páginas, sube un archivo PDF desde el formulario de edición a la izquierda.</p>
+                </div>
+            {% endif %}
+
+            {% if book.user_notes %}
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-light"><strong>📓 Tus Notas y Reseñas Personales</strong></div>
+                    <div class="card-body">
+                        <p style="white-space: pre-wrap; font-size: 0.9rem;" class="mb-0">{{ book.user_notes }}</p>
+                    </div>
                 </div>
             {% endif %}
         </div>
-    </div>        <form action="{% url 'complete_book' book.id %}" method="POST">
-            {% csrf_token %}
-            <button type="submit" class="completeButtonColor btn btn-secondary btn-block buttonMargin">Mark as Complete</button>
-        </form>
-
-        <form action="{% url 'delete_book' book.id %}" method="POST">
-            {% csrf_token %}
-            <button type="submit" class="deleteButtonColor btn btn-secondary btn-block buttonMargin">Delete Book</button>
-        </form>
+    </div>
 </div>
+
+{% if book.pdf_file %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // URL del PDF y worker de PDF.js
+    const url = "{{ book.pdf_file.url }}";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // Estado del visor
+    let pdfDoc = null;
+    let pageNum = {{ book.pages_read|default:1 }};
+    if (pageNum < 1) pageNum = 1;
+    let pageRendering = false;
+    let pageNumPending = null;
+    let scale = 1.15;
+    let totalPdfPages = 0;
+    let lastSavedPage = {{ book.pages_read }};
+    const initialPagesTotal = {{ book.pages_total }};
+
+    // Elementos DOM
+    const canvas = document.getElementById('pdfCanvas');
+    const ctx = canvas.getContext('2d');
+    const loadingSpinner = document.getElementById('pdfLoadingSpinner');
+    const container = document.getElementById('pdfViewerContainer');
+    const pageNumInput = document.getElementById('pdfCurrentPageInput');
+    const pageCountSpan = document.getElementById('pdfTotalPagesDisplay');
+    const prevBtn = document.getElementById('pdfPrevBtn');
+    const nextBtn = document.getElementById('pdfNextBtn');
+    const zoomInBtn = document.getElementById('pdfZoomInBtn');
+    const zoomOutBtn = document.getElementById('pdfZoomOutBtn');
+    const zoomFitBtn = document.getElementById('pdfZoomFitBtn');
+    const syncBadge = document.getElementById('pdfSyncBadge');
+    const syncAlert = document.getElementById('pdfSyncInfoAlert');
+    const savedPageNumSpan = document.getElementById('pdfSavedPageNum');
+
+    // Elementos del dashboard de progreso
+    const progressBar = document.getElementById('progressBar');
+    const displayProgressPercent = document.getElementById('displayProgressPercent');
+    const displayPagesRead = document.getElementById('displayPagesRead');
+    const displayPagesTotal = document.getElementById('displayPagesTotal');
+    const completedBadge = document.getElementById('completedBadge');
+    const pagesForDayTableBody = document.getElementById('pagesForDayTableBody');
+    const formPagesReadInput = document.getElementById('id_pages_read');
+    const formPagesTotalInput = document.getElementById('id_pages_total');
+
+    // Token CSRF para peticiones AJAX
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]') ? 
+                      document.querySelector('[name=csrfmiddlewaretoken]').value : '';
+
+    // Función para renderizar una página en canvas
+    function renderPage(num) {
+        pageRendering = true;
+        pdfDoc.getPage(num).then(function(page) {
+            const viewport = page.getViewport({ scale: scale });
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            const renderContext = {
+                canvasContext: ctx,
+                viewport: viewport
+            };
+            const renderTask = page.render(renderContext);
+
+            renderTask.promise.then(function() {
+                pageRendering = false;
+                loadingSpinner.style.display = 'none';
+                canvas.style.display = 'block';
+
+                if (pageNumPending !== null) {
+                    renderPage(pageNumPending);
+                    pageNumPending = null;
+                }
+            });
+        });
+
+        // Actualizar controles numéricos
+        pageNumInput.value = num;
+        prevBtn.disabled = (num <= 1);
+        nextBtn.disabled = (num >= totalPdfPages);
+    }
+
+    function queueRenderPage(num) {
+        if (pageRendering) {
+            pageNumPending = num;
+        } else {
+            renderPage(num);
+        }
+    }
+
+    // Sincronización en segundo plano con Django
+    let syncTimeout = null;
+    function syncProgress(pageToSave, totalToSave) {
+        if (!csrfToken) return;
+
+        clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(function() {
+            fetch("{% url 'update_pdf_progress' book.id %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken
+                },
+                body: JSON.stringify({
+                    current_page: pageToSave,
+                    total_pages: totalToSave
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    // Actualizar barra de progreso y badges
+                    progressBar.style.width = data.progress + "%";
+                    progressBar.setAttribute('aria-valuenow', data.progress);
+                    progressBar.textContent = data.progress + "%";
+                    displayProgressPercent.textContent = data.progress;
+                    displayPagesRead.textContent = data.pages_read;
+                    displayPagesTotal.textContent = data.pages_total;
+
+                    // Actualizar campos del formulario manual si existen
+                    if (formPagesReadInput) formPagesReadInput.value = data.pages_read;
+                    if (formPagesTotalInput) formPagesTotalInput.value = data.pages_total;
+
+                    // Actualizar estado completado
+                    if (data.date_completed) {
+                        completedBadge.style.display = 'inline-block';
+                        completedBadge.textContent = "✅ Libro Completado (" + data.date_completed + ")";
+                    }
+
+                    // Actualizar tabla de ritmo diario en vivo
+                    if (data.pages_for_day && pagesForDayTableBody) {
+                        let rows = "";
+                        data.pages_for_day.forEach(function(item) {
+                            const d = item[0];
+                            const p = item[1];
+                            rows += `<tr><td>${d} día${d > 1 ? 's' : ''}</td><td><strong>${p}</strong> pág/día</td></tr>`;
+                        });
+                        pagesForDayTableBody.innerHTML = rows;
+                    }
+
+                    // Notificación flotante de sincronización
+                    savedPageNumSpan.textContent = pageToSave;
+                    syncBadge.style.display = 'inline-block';
+                    setTimeout(() => {
+                        syncBadge.style.display = 'none';
+                    }, 3500);
+
+                    lastSavedPage = Math.max(lastSavedPage, pageToSave);
+                }
+            })
+            .catch(err => {
+                console.warn("No se pudo sincronizar el progreso del PDF:", err);
+            });
+        }, 300);
+    }
+
+    // Navegación
+    function onPrevPage() {
+        if (pageNum <= 1) return;
+        pageNum--;
+        queueRenderPage(pageNum);
+        // Si avanzamos más allá de lo registrado, sincronizamos
+        if (pageNum > lastSavedPage) {
+            syncProgress(pageNum, totalPdfPages);
+        }
+    }
+
+    function onNextPage() {
+        if (pageNum >= totalPdfPages) return;
+        pageNum++;
+        queueRenderPage(pageNum);
+        if (pageNum > lastSavedPage) {
+            syncProgress(pageNum, totalPdfPages);
+        }
+    }
+
+    prevBtn.addEventListener('click', onPrevPage);
+    nextBtn.addEventListener('click', onNextPage);
+
+    // Salto directo a página
+    pageNumInput.addEventListener('change', function() {
+        let val = parseInt(this.value);
+        if (isNaN(val) || val < 1) val = 1;
+        if (val > totalPdfPages) val = totalPdfPages;
+        pageNum = val;
+        queueRenderPage(pageNum);
+        if (pageNum > lastSavedPage) {
+            syncProgress(pageNum, totalPdfPages);
+        }
+    });
+
+    // Controles de Zoom
+    zoomInBtn.addEventListener('click', function() {
+        scale += 0.15;
+        renderPage(pageNum);
+    });
+
+    zoomOutBtn.addEventListener('click', function() {
+        if (scale > 0.4) {
+            scale -= 0.15;
+            renderPage(pageNum);
+        }
+    });
+
+    zoomFitBtn.addEventListener('click', function() {
+        if (pdfDoc && container) {
+            pdfDoc.getPage(pageNum).then(function(page) {
+                const viewport = page.getViewport({ scale: 1.0 });
+                const containerWidth = container.clientWidth - 40;
+                scale = containerWidth / viewport.width;
+                renderPage(pageNum);
+            });
+        }
+    });
+
+    // Atajos de teclado para lectura cómoda (flecha izquierda y derecha)
+    document.addEventListener('keydown', function(e) {
+        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+            return;
+        }
+        if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+            e.preventDefault();
+            onNextPage();
+        } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+            e.preventDefault();
+            onPrevPage();
+        }
+    });
+
+    // Cargar el documento PDF
+    const loadingTask = pdfjsLib.getDocument(url);
+    loadingTask.promise.then(function(pdf) {
+        pdfDoc = pdf;
+        totalPdfPages = pdfDoc.numPages;
+        pageCountSpan.textContent = totalPdfPages;
+        pageNumInput.max = totalPdfPages;
+
+        // Ajustar página inicial si supera el total
+        if (pageNum > totalPdfPages) {
+            pageNum = totalPdfPages;
+        }
+
+        // Resolución del conflicto de páginas: Si el PDF tiene un total diferente, sincronizar
+        if (totalPdfPages !== initialPagesTotal) {
+            syncAlert.style.display = 'block';
+            syncAlert.innerHTML = `ℹ️ <strong>Páginas sincronizadas con el PDF adjunto:</strong> El total de páginas se ajustó automáticamente de <strong>${initialPagesTotal}</strong> a <strong>${totalPdfPages}</strong> páginas reales.`;
+            syncProgress(pageNum, totalPdfPages);
+        }
+
+        renderPage(pageNum);
+    }).catch(function(error) {
+        loadingSpinner.innerHTML = `
+            <div class="alert alert-warning mb-0 text-dark">
+                ⚠️ No se pudo visualizar el PDF automáticamente.<br>
+                <a href="${url}" target="_blank" class="btn btn-sm btn-outline-dark mt-2">Descargar / Abrir en visor nativo</a>
+            </div>
+        `;
+    });
+});
+</script>
+{% endif %}
+
 {% endblock %}
