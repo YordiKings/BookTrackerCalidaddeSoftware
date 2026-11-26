@@ -166,6 +166,17 @@
                         </span>
                     </div>
 
+                    <!-- Modo consulta (H09): al saltar a otra página no se marca como leída -->
+                    <div id="pdfConsultBar" class="d-none align-items-center justify-content-between flex-wrap px-3 py-1 border-bottom" style="font-size: 0.8rem; background-color: #FFF8E1;">
+                        <span>
+                            🔎 <strong>Modo consulta:</strong> esta página no cuenta como leída.
+                            Tu progreso sigue en la pág. <strong id="pdfFrontierNum">{{ book.pages_read }}</strong>.
+                        </span>
+                        <button type="button" class="btn btn-sm btn-outline-dark py-0 my-1" id="pdfSaveHereBtn">
+                            📌 Guardar esta página como mi progreso
+                        </button>
+                    </div>
+
                     <!-- Contenedor del documento PDF renderizado -->
                     <div id="pdfViewerContainer" style="overflow: auto; max-height: 650px; min-height: 480px; background-color: #525659; text-align: center; padding: 12px; position: relative;">
                         <div id="pdfLoadingSpinner" class="text-white py-5">
@@ -176,7 +187,7 @@
                     </div>
 
                     <div class="card-footer py-2 bg-light d-flex justify-content-between align-items-center">
-                        <small class="text-muted">El avance de lectura se guarda automáticamente al cambiar de página.</small>
+                        <small class="text-muted">El avance se guarda al leer en orden con «Siguiente». Los saltos de página son solo de consulta.</small>
                         <a href="{{ book.pdf_file.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
                             Abrir archivo original ↗
                         </a>
@@ -216,7 +227,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let pageNumPending = null;
     let scale = 1.15;
     let totalPdfPages = 0;
-    let lastSavedPage = {{ book.pages_read }};
+    // Última página contada como leída (el "progreso"). Solo avanza leyendo en orden
+    // desde aquí, o con el botón "Guardar esta página como mi progreso" (H09).
+    let readingFrontier = {{ book.pages_read }};
     const initialPagesTotal = {{ book.pages_total }};
 
     // Elementos DOM
@@ -234,6 +247,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const syncBadge = document.getElementById('pdfSyncBadge');
     const syncAlert = document.getElementById('pdfSyncInfoAlert');
     const savedPageNumSpan = document.getElementById('pdfSavedPageNum');
+    const consultBar = document.getElementById('pdfConsultBar');
+    const frontierNumSpan = document.getElementById('pdfFrontierNum');
+    const saveHereBtn = document.getElementById('pdfSaveHereBtn');
 
     // Elementos del dashboard de progreso
     const progressBar = document.getElementById('progressBar');
@@ -279,6 +295,16 @@ document.addEventListener('DOMContentLoaded', function() {
         pageNumInput.value = num;
         prevBtn.disabled = (num <= 1);
         nextBtn.disabled = (num >= totalPdfPages);
+        updateConsultBar();
+    }
+
+    // Muestra el aviso de "modo consulta" cuando la página visible no es la de lectura
+    // (ni la última leída ni la siguiente por leer).
+    function updateConsultBar() {
+        const consulting = pageNum > readingFrontier + 1 || pageNum < readingFrontier;
+        frontierNumSpan.textContent = readingFrontier;
+        consultBar.classList.toggle('d-none', !consulting);
+        consultBar.classList.toggle('d-flex', consulting);
     }
 
     function queueRenderPage(num) {
@@ -322,10 +348,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (formPagesReadInput) formPagesReadInput.value = data.pages_read;
                     if (formPagesTotalInput) formPagesTotalInput.value = data.pages_total;
 
-                    // Actualizar estado completado
+                    // Actualizar estado completado (el progreso también puede bajar)
                     if (data.date_completed) {
                         completedBadge.style.display = 'inline-block';
                         completedBadge.textContent = "✅ Libro Completado (" + data.date_completed + ")";
+                    } else {
+                        completedBadge.style.display = 'none';
                     }
 
                     // Actualizar tabla de ritmo diario en vivo
@@ -345,8 +373,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => {
                         syncBadge.style.display = 'none';
                     }, 3500);
-
-                    lastSavedPage = Math.max(lastSavedPage, pageToSave);
                 }
             })
             .catch(err => {
@@ -359,35 +385,42 @@ document.addEventListener('DOMContentLoaded', function() {
     function onPrevPage() {
         if (pageNum <= 1) return;
         pageNum--;
+        // Retroceder nunca modifica el progreso (es relectura o consulta)
         queueRenderPage(pageNum);
-        // Si avanzamos más allá de lo registrado, sincronizamos
-        if (pageNum > lastSavedPage) {
-            syncProgress(pageNum, totalPdfPages);
-        }
     }
 
     function onNextPage() {
         if (pageNum >= totalPdfPages) return;
+        const fromPage = pageNum;
         pageNum++;
         queueRenderPage(pageNum);
-        if (pageNum > lastSavedPage) {
+        // Solo cuenta como LECTURA si se avanza desde una página ya leída o desde la
+        // siguiente por leer. Si se avanza desde una página saltada (consulta), no cuenta.
+        if (fromPage <= readingFrontier + 1 && pageNum > readingFrontier) {
+            readingFrontier = pageNum;
             syncProgress(pageNum, totalPdfPages);
         }
+        updateConsultBar();
     }
 
     prevBtn.addEventListener('click', onPrevPage);
     nextBtn.addEventListener('click', onNextPage);
 
-    // Salto directo a página
+    // Salto directo a página: es una CONSULTA, no marca páginas como leídas
     pageNumInput.addEventListener('change', function() {
         let val = parseInt(this.value);
         if (isNaN(val) || val < 1) val = 1;
         if (val > totalPdfPages) val = totalPdfPages;
         pageNum = val;
         queueRenderPage(pageNum);
-        if (pageNum > lastSavedPage) {
-            syncProgress(pageNum, totalPdfPages);
-        }
+    });
+
+    // Guardado explícito: el usuario decide que la página visible es su progreso
+    // (sirve para avanzar si leyó en otro lado, o para corregir hacia atrás)
+    saveHereBtn.addEventListener('click', function() {
+        readingFrontier = pageNum;
+        syncProgress(pageNum, totalPdfPages);
+        updateConsultBar();
     });
 
     // Controles de Zoom
@@ -445,7 +478,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (totalPdfPages !== initialPagesTotal) {
             syncAlert.style.display = 'block';
             syncAlert.innerHTML = `ℹ️ <strong>Páginas sincronizadas con el PDF adjunto:</strong> El total de páginas se ajustó automáticamente de <strong>${initialPagesTotal}</strong> a <strong>${totalPdfPages}</strong> páginas reales.`;
-            syncProgress(pageNum, totalPdfPages);
+            // Se envía el progreso real (no la página visible, que es 1 si aún no hay avance)
+            readingFrontier = Math.min(readingFrontier, totalPdfPages);
+            syncProgress(readingFrontier, totalPdfPages);
         }
 
         renderPage(pageNum);

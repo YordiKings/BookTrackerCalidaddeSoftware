@@ -1,15 +1,34 @@
 .navcolor{
     background-color: #DCBD9E;
 }
+/* Contraste (H12): los enlaces del menú usaban rgba(0,0,0,.5) de Bootstrap = 3.5:1 sobre beige.
+   Con .8 se obtiene 8.41:1 (WCAG AA pide 4.5:1). */
+.navcolor .navbar-light .navbar-nav .nav-link,
+.navbar-light.navcolor .navbar-nav .nav-link{
+    color: rgba(0, 0, 0, 0.8);
+}
+.navcolor .navbar-light .navbar-nav .nav-link:hover,
+.navcolor .navbar-light .navbar-nav .active > .nav-link,
+.navbar-light.navcolor .navbar-nav .nav-link:hover,
+.navbar-light.navcolor .navbar-nav .active > .nav-link{
+    color: #000000;
+}
 .pagebg{
     background-color: #F2E9DCF0;
 }
 .formOutline{
     outline: 6px solid #DCBD9E;
 }
+/* Contraste (H12): antes texto blanco sobre beige = 1.78:1. Texto oscuro sobre beige = 9.18:1 */
 .formButtonColor{
     background-color: #DCBD9E;
-    color: #FFFFFF;
+    color: #1A202C;
+    border-color: #C9A27C;
+}
+.formButtonColor:hover,
+.formButtonColor:focus{
+    background-color: #C9A27C;
+    color: #1A202C;
 }
 table.table-bordered{
     border: 1px solid #DCBD9E;
@@ -23,9 +42,11 @@ table.table-bordered > tbody > tr > td {
 .buttonMargin{
     margin:5px;
 }
+/* Contraste (H12): antes texto negro sobre #e02626 = 4.47:1. Texto blanco sobre #B91C1C = 6.47:1 */
 .deleteButtonColor{
-    background-color: #e02626;
-    color: black;
+    background-color: #B91C1C;
+    border-color: #B91C1C;
+    color: #FFFFFF;
 }
 .completeButtonColor{
     background-color: #6ee628f0;
@@ -34,4 +55,35 @@ table.table-bordered > tbody > tr > td {
 .updateButtonColor{
     background-color: #f3e034f0;
     color: black;
+}
+
+/* Errores de formularios de Django (H02): antes salían como lista sin estilo */
+ul.errorlist{
+    list-style: none;
+    padding: 0.4rem 0.75rem;
+    margin: 0 0 0.5rem 0;
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+/* Portadas de la biblioteca (H14): misma altura para todas las tarjetas */
+.book-cover{
+    height: 220px;
+    width: 100%;
+    object-fit: cover;
+}
+.book-cover-placeholder{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #F2E9DC, #DCBD9E);
+    color: #4A3B2C;
+    font-size: 3rem;
+}
+.book-cover-placeholder small{
+    font-size: 0.85rem;
 }

@@ -2,7 +2,7 @@
 
 **BookTracker** es una aplicación web integral desarrollada con **Python** y **Django** diseñada para gestionar, dar seguimiento y gamificar el hábito de lectura personal. Permite a los usuarios registrar sus libros, controlar su progreso diario de lectura, calcular metas a corto plazo, subir archivos PDF y portadas, y consultar estadísticas personales.
 
-El sistema incorpora un **buscador predictivo en tiempo real** con enriquecimiento bibliográfico híbrido (**Google Books API** con fallback automático a **Open Library**), un **visor interactivo de PDFs** con sincronización automática de páginas en vivo, políticas de **limpieza automática de almacenamiento** y un panel de métricas ágiles (**Agile Dashboard**) para monitorear el desempeño del equipo de desarrollo a lo largo de los Sprints.
+El sistema incorpora un **buscador predictivo en tiempo real** con enriquecimiento bibliográfico híbrido (**Google Books API** con fallback automático a **Open Library**), un **visor interactivo de PDFs** con sincronización automática de páginas en vivo y políticas de **limpieza automática de almacenamiento**.
 
 ---
 
@@ -29,7 +29,8 @@ El sistema incorpora un **buscador predictivo en tiempo real** con enriquecimien
 - **Renderizado nativo en Canvas HTML5:** Sustituye los antiguos `<iframe>` estáticos por un lector fluido e interactivo sin depender de plugins de terceros.
 - **Resolución inteligente del conflicto de páginas ("El PDF manda"):** Si la edición física registrada en el catálogo tiene un conteo de páginas diferente al archivo PDF digital subido por el usuario (ej. 110 págs. impresas vs. 25 págs. en el PDF), el visor detecta las páginas reales del documento (`pdfDoc.numPages`) y calibra automáticamente `pages_total = 25`.
 - **Sincronización en tiempo real:**
-  - Al avanzar páginas en el visor, una petición asíncrona guarda el progreso en el backend.
+  - Al leer en orden con «Siguiente» (o la flecha ▶) desde tu progreso, una petición asíncrona guarda el avance en el backend.
+  - **Modo consulta:** saltar a otra página (con el campo de página o desde una página saltada) no la marca como leída. El botón «📌 Guardar esta página como mi progreso» permite fijar el avance manualmente, hacia adelante o hacia atrás.
   - **Actualización dinámica de la interfaz:** La barra de progreso, el porcentaje (`XX%`), los campos de edición y la tabla de ritmo diario se recalculan en vivo sin necesidad de recargar la página.
   - Al llegar a la última página, el libro se marca automáticamente como completado (`✅ Libro Completado`).
 - **Controles de lectura:** Botones Anterior/Siguiente, input para saltar a cualquier página, zoom interactivo (acercar, alejar y ajustar al ancho) y soporte para atajos de teclado (flechas `◀` / `▶` o `RePág` / `AvPág`).
@@ -43,8 +44,9 @@ El sistema incorpora un **buscador predictivo en tiempo real** con enriquecimien
 - Cada libro cuenta con un espacio dedicado (`user_notes`) para que el lector guarde reflexiones personales, citas textuales destacadas o resúmenes de sus lecturas.
 
 ### 6. 📊 Perfil de Lectura y Gamificación
-- Cálculo automático de récords de lectura en un solo día (`most_pages_read`).
-- Acumulado de páginas leídas en el mes corriente y promedio diario estimado.
+- Registro diario de lectura (`DailyReading`): cada día guarda las páginas leídas en la fecha local (`America/Mexico_City`).
+- Récord de lectura en un solo día (`most_pages_read`), calculado como el día con más páginas.
+- Acumulado de páginas leídas en el mes corriente (se reinicia al cambiar de mes) y promedio diario estimado.
 - Proyección de ritmo de lectura: tabla calculada de páginas diarias necesarias para terminar el libro en plazos de 1 a 10 días.
 
 ### 7. 🔐 Seguridad y Gestión de Credenciales
@@ -52,16 +54,13 @@ El sistema incorpora un **buscador predictivo en tiempo real** con enriquecimien
 - Plantilla pública `.env.example` para despliegues sin exponer claves privadas.
 - Cargador nativo ultraligero en `settings.py` sin dependencias externas pesadas.
 
-### 8. 📈 Agile Dashboard
-- Panel de control integrado con **Chart.js** que visualiza métricas de desarrollo de los Sprints (velocidad, previsibilidad, cobertura de código, lead time y defectos).
-
 ---
 
 ## 🛠️ Tecnologías Utilizadas
 
 - **Backend:** Python 3.12+, Django 6.1+
 - **Base de Datos:** SQLite (desarrollo local con soporte para migraciones automáticas)
-- **Frontend:** HTML5, CSS3 personalizado, Bootstrap 5, Chart.js
+- **Frontend:** HTML5, CSS3 personalizado, Bootstrap 5
 - **Lector PDF:** Mozilla PDF.js v3.11.174
 - **APIs de Libros:** Google Books API v1, Open Library Search API & Covers API
 - **Testing:** Pytest, Django Test Runner, Unittest Mock
@@ -80,9 +79,7 @@ BookTracker/
 │   ├── wsgi.py / asgi.py       # Puntos de entrada para servidores web
 │
 ├── books/                      # Aplicación principal de Django
-│   ├── data/
-│   │   └── metrics.json        # Datos históricos de Sprints para el Agile Dashboard
-│   ├── migrations/             # Migraciones del esquema de base de datos (0001 a 0003)
+│   ├── migrations/             # Migraciones del esquema de base de datos (0001 a 0004)
 │   ├── templates/              # Plantillas HTML con renderizado dinámico
 │   │   ├── base.html           # Layout base con navbar responsiva
 │   │   ├── home.html           # Pantalla de bienvenida
@@ -91,8 +88,7 @@ BookTracker/
 │   │   ├── books.html          # Biblioteca con tarjetas, badges y barras de progreso
 │   │   ├── book_detail.html    # Ficha técnica, notas, edición y Visor PDF interactivo
 │   │   ├── create_book.html    # Formulario con buscador predictivo y preview de portada
-│   │   ├── dashboard.html      # Panel personal de lectura y estadísticas del perfil
-│   │   └── agile_dashboard.html# Panel de métricas Scrum/Ágiles
+│   │   └── dashboard.html      # Panel personal de lectura y estadísticas del perfil
 │   ├── admin.py                # Configuración del panel de administración
 │   ├── forms.py                # Formularios Django (BookForm, SignUpForm, SignInForm)
 │   ├── models.py               # Modelos (Book, Profile) y señales de limpieza física

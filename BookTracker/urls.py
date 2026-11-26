@@ -19,7 +19,6 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from books import views
-from books.views import agile_dashboard
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -34,6 +33,5 @@ urlpatterns = [
     path('books/<int:book_id>/update-pdf-progress/', views.update_pdf_progress, name='update_pdf_progress'),
     path('logout/', views.signout, name='signout'),
     path('signin/', views.signin, name='signin'),
-    path("agile-dashboard/", agile_dashboard, name="agile_dashboard"),
     path('api/search-books/', views.search_google_books, name='search_google_books'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
