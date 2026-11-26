@@ -1,19 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
 
-{{error}}
-<div class = "d-flex flex-column justify-content-center flex-wrap rounded">
+<div class="d-flex flex-column justify-content-center flex-wrap rounded my-4" style="width: 100%; max-width: 480px;">
     <div class="d-flex p-2 justify-content-center">
-        <h1>Sign in</h1>
+        <h1>Iniciar sesión</h1>
     </div>
-    <div class = "p-2 rounded formOutline" style=" background-color:#FFFFFF">
-        <form action="/signin/" method ="POST">
+    <div class="p-3 rounded formOutline" style="background-color:#FFFFFF">
+        {% if error %}
+            <div class="alert alert-danger" role="alert">{{ error }}</div>
+        {% endif %}
+        <form action="/signin/" method="POST">
             {% csrf_token %}
-            {{form.as_p}}
-            <button type="submit" class="formButtonColor btn btn-secondary btn-block ">Submit</button>
+            {{ form.as_p }}
+            <button type="submit" class="formButtonColor btn btn-secondary btn-block">Entrar</button>
         </form>
         <div class="d-flex p-2 justify-content-center">
-                    <a href="/signup">Not registered? Sign Up</h1>
+            <a href="/signup">¿No tienes cuenta? Regístrate</a>
         </div>
     </div>
+</div>
 {% endblock %}

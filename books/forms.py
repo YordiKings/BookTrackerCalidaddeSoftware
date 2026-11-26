@@ -24,7 +24,21 @@ class BookForm(ModelForm):
         self.fields['pdf_file'].widget.attrs['class'] = 'form-control'
         self.fields['user_notes'].widget.attrs['class'] = 'form-control'
         self.fields['user_notes'].label = 'Notas personales / Reseña'
-        
+        # "Páginas leídas" vacío se interpreta como 0 en lugar de provocar un error
+        self.fields['pages_read'].required = False
+
+    def clean_pages_read(self):
+        pages_read = self.cleaned_data.get('pages_read')
+        return 0 if pages_read is None else pages_read
+
+    def clean(self):
+        cleaned_data = super().clean()
+        pages_read = cleaned_data.get('pages_read')
+        pages_total = cleaned_data.get('pages_total')
+        if pages_read is not None and pages_total is not None and pages_read > pages_total:
+            self.add_error('pages_read', 'No puedes leer más páginas de las que tiene el libro.')
+        return cleaned_data
+
 class SignUpForm(UserCreationForm):
     class Meta:
         model = User

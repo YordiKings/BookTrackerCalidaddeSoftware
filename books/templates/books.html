@@ -1,46 +1,66 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="d-flex p-2 justify-content-center flex-wrap flex-column">
+<div class="d-flex p-2 justify-content-center flex-wrap flex-column w-100">
     <div class="d-flex p-2 justify-content-center">
-        <h1 class="p-2">Library</h1>
+        <h1 class="p-2">Mi biblioteca</h1>
     </div>
-    <div class="d-flex album py-5 pagebg ">
+    <div class="d-flex album py-3 pagebg">
         <div class="container-fluid">
             <div class="row">
-                    
-                    {% for book in books %}
-                <div class="col">  
-                    <div class="card mb-4 box-shadow shadow" style="width: 100%">
-                        <div class="card-body shadow">
-                                <a class="card-text" href="{% url 'book_detail' book.id %}" style="text-decoration: none;">
-                                    {% if book.cover %}
-                                        <img src="{{ book.cover.url }}" alt="{{ book.title }}" class="img-fluid rounded mb-2" style="max-height: 200px; object-fit: cover; width: 100%;">
-                                    {% endif %}
-                                    <strong class="text-dark"> {{book.title}} </strong>
-                                    <p class="card-text text-dark">{{book.autor}}</p>
-                                    {% if book.category %}
-                                        <span class="badge badge-info mb-1" style="font-size: 0.7rem;">{{ book.category }}</span>
-                                    {% endif %}
-                                    {% if book.average_rating %}
-                                        <span class="badge badge-warning mb-1" style="font-size: 0.7rem;">⭐ {{ book.average_rating }}</span>
-                                    {% endif %}
-                                    {% if book.goal %}
-                                        <p class="card-text text-dark">Goal: {{book.goal|date:'j/M/Y'}}</p>
-                                    {% endif %}
-                                    {% if book.date_completed %}
-                                        <p class="card-text text-dark">✅ {{ book.date_completed|date:'j/M/Y' }}</p>
-                                    {% endif %}
-                                    <p class="card-text text-dark">{{book.pages_read}} de {{book.pages_total}}</p>
-                                    <div class= "progress" >
-                                        <div style="width: {{book.progress}}%" class="progress-bar" role="progressbar" aria-valuenow="{{book.progress}}" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>      
-                                </a>
+                {% for book in books %}
+                <!-- 1 columna en celular, 2 en tablet, 3 en laptop y 4 en pantallas grandes -->
+                <div class="col-12 col-sm-6 col-md-4 col-xl-3 mb-4">
+                    <div class="card box-shadow shadow h-100">
+                        <a href="{% url 'book_detail' book.id %}" class="text-decoration-none">
+                            {% if book.cover %}
+                                <img src="{{ book.cover.url }}" alt="Portada de {{ book.title }}" class="card-img-top book-cover">
+                            {% else %}
+                                <div class="card-img-top book-cover book-cover-placeholder" role="img" aria-label="Libro sin portada">
+                                    <span aria-hidden="true">📖</span>
+                                    <small>Sin portada</small>
+                                </div>
+                            {% endif %}
+                        </a>
+                        <div class="card-body d-flex flex-column">
+                            <a class="card-text" href="{% url 'book_detail' book.id %}" style="text-decoration: none;">
+                                <strong class="text-dark">{{ book.title }}</strong>
+                                <p class="card-text text-dark mb-1">{{ book.autor }}</p>
+                            </a>
+                            <div>
+                                {% if book.category %}
+                                    <span class="badge badge-info mb-1" style="font-size: 0.7rem;">{{ book.category }}</span>
+                                {% endif %}
+                                {% if book.average_rating %}
+                                    <span class="badge badge-warning mb-1" style="font-size: 0.7rem;">⭐ {{ book.average_rating }}</span>
+                                {% endif %}
+                            </div>
+                            {% if book.goal %}
+                                <p class="card-text text-dark mb-1">Meta: {{ book.goal|date:'j/M/Y' }}</p>
+                            {% endif %}
+                            {% if book.date_completed %}
+                                <p class="card-text text-dark mb-1">✅ Terminado el {{ book.date_completed|date:'j/M/Y' }}</p>
+                            {% endif %}
+                            <!-- mt-auto empuja el progreso al fondo para alinear todas las tarjetas -->
+                            <div class="mt-auto">
+                                <p class="card-text text-dark mb-1">{{ book.pages_read }} de {{ book.pages_total }} páginas</p>
+                                <div class="progress">
+                                    <div style="width: {{ book.progress }}%" class="progress-bar" role="progressbar" aria-valuenow="{{ book.progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                    {% endfor %}
-                
+                {% empty %}
+                <div class="col-12">
+                    <div class="text-center bg-white rounded shadow-sm p-5 mx-auto" style="max-width: 560px;">
+                        <div style="font-size: 3rem;" aria-hidden="true">📚</div>
+                        <h2 class="h4 mt-2">Tu biblioteca está vacía</h2>
+                        <p class="text-muted">Agrega tu primer libro para empezar a registrar tu progreso de lectura.</p>
+                        <a href="{% url 'create_book' %}" class="formButtonColor btn px-4">Agregar mi primer libro</a>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>

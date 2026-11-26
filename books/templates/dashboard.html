@@ -4,21 +4,55 @@
 
 <div class="d-flex container flex-wrap">
     <div class="d-flex justify-content-center w-100 my-4">
-        <h1>Dashboard</h1>
+        <h1>Estadísticas de lectura</h1>
     </div>
-    
-    
-    {% regroup books_created by created|date:"F" as created_list %}
+
+    <!-- Resumen del perfil: récord, mes actual y promedio -->
+    <div class="row w-100 mx-0 mb-2">
+        <div class="col-12 col-md-4 mb-3">
+            <div class="bg-white shadow-sm rounded p-3 h-100">
+                <h2 class="h6 text-uppercase text-muted mb-2">Récord de páginas en un día</h2>
+                {% if profile.most_pages_read and profile.date_most_pages_read %}
+                    <p class="h3 mb-1">{{ profile.most_pages_read }} páginas</p>
+                    <p class="text-muted mb-0">el {{ profile.date_most_pages_read|date:'j \d\e F \d\e Y' }}</p>
+                {% else %}
+                    <p class="text-muted mb-0">Aún no hay registros. Tu récord aparecerá cuando registres páginas leídas.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-12 col-md-4 mb-3">
+            <div class="bg-white shadow-sm rounded p-3 h-100">
+                <h2 class="h6 text-uppercase text-muted mb-2">Páginas leídas este mes</h2>
+                <p class="h3 mb-0">{{ profile.pages_this_month }}</p>
+            </div>
+        </div>
+        <div class="col-12 col-md-4 mb-3">
+            <div class="bg-white shadow-sm rounded p-3 h-100">
+                <h2 class="h6 text-uppercase text-muted mb-2">Promedio de páginas por día</h2>
+                <p class="h3 mb-0">{{ profile.average_pages_for_day }} <small class="text-muted">/ día</small></p>
+            </div>
+        </div>
+    </div>
+
+    {% if not books_created %}
+        <div class="w-100 text-center bg-white rounded shadow-sm p-4 mb-4">
+            <p class="mb-2">Todavía no tienes libros registrados.</p>
+            <a href="{% url 'create_book' %}" class="formButtonColor btn px-4">Agregar mi primer libro</a>
+        </div>
+    {% endif %}
+
+    <!-- Se agrupa por mes Y año para no mezclar, p. ej., enero 2026 con enero 2027 -->
+    {% regroup books_created by created|date:"F Y" as created_list %}
     {% for month in created_list %}
-        <div class="d-flex album p-4 m-4 w-100 flex-wrap shadow" style="background:white">
-            <div class="d-flex justify-content-left w-100 pl-4">
+        <div class="d-flex album p-3 p-md-4 my-3 w-100 flex-wrap shadow" style="background:white">
+            <div class="d-flex justify-content-left w-100 pl-2 pl-md-4">
                 <h2 class="text-capitalize">Agregados en {{ month.grouper }}</h2>
             </div>
             <div class="container-fluid">
-                <div class="row">   
+                <div class="row">
                     {% for book in month.list %}
-                    <div class= "col-4">
-                        <div class="card my-2" style="width: 100%">
+                    <div class="col-12 col-sm-6 col-lg-4 my-2">
+                        <div class="card h-100" style="width: 100%">
                             <div class="card-body shadow ">
                                 <a href="{% url 'book_detail' book.id %}">
                                     <strong class="text-dark"> {{book.title}} </strong>
@@ -27,13 +61,13 @@
                                         <p class="text-dark">Meta: {{book.goal|date:'j/M/Y'}}</p>
                                     {% endif %}
                                     {% if book.date_completed %}
-                                        <p class="text-dark">{{ book.date_completed|date:'j/M/Y' }}</p>
+                                        <p class="text-dark">✅ Terminado el {{ book.date_completed|date:'j/M/Y' }}</p>
                                     {% endif %}
                                     <p class="text-dark">{{book.pages_read}} de {{book.pages_total}}</p>
                                     <p class="text-dark">{{book.progress}}%</p>
                                     <div class= "progress" >
                                         <div style="width: {{book.progress}}%" class="progress-bar" role="progressbar" aria-valuenow="{{book.progress}}" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>  
+                                    </div>
                                 </a>
                             </div>
                         </div>
@@ -44,18 +78,18 @@
         </div>
     {% endfor %}
 
-    {% regroup books_completed by date_completed|date:"F" as completed_list %}
+    {% regroup books_completed by date_completed|date:"F Y" as completed_list %}
     {% for month in completed_list %}
-        <div class="d-flex album p-4 m-4 w-100 flex-wrap shadow" style="background:white">
-            <div class="d-flex justify-content-left w-100 pl-4">
+        <div class="d-flex album p-3 p-md-4 my-3 w-100 flex-wrap shadow" style="background:white">
+            <div class="d-flex justify-content-left w-100 pl-2 pl-md-4">
                 <h2 class="text-capitalize">Terminados en {{ month.grouper }}</h2>
             </div>
             <div class="container-fluid">
-                <div class="row">   
+                <div class="row">
                     {% for book in month.list %}
-                    <div class= "col-4">
-                        <div class="card my-2" style="width: 100%">
-                            <div class="card-body shadow ">    
+                    <div class="col-12 col-sm-6 col-lg-4 my-2">
+                        <div class="card h-100" style="width: 100%">
+                            <div class="card-body shadow ">
                                 <a href="{% url 'book_detail' book.id %}" class="text-dark">
                                     <strong class="text-dark"> {{book.title}} </strong>
                                     <p class="text-dark">{{book.autor}}</p>
@@ -63,13 +97,13 @@
                                         <p class="text-dark">Meta: {{book.goal|date:'j/M/Y'}}</p>
                                     {% endif %}
                                     {% if book.date_completed %}
-                                        <p class="text-dark">{{ book.date_completed|date:'j/M/Y' }}</p>
+                                        <p class="text-dark">✅ Terminado el {{ book.date_completed|date:'j/M/Y' }}</p>
                                     {% endif %}
                                     <p class="text-dark">{{book.pages_read}} de {{book.pages_total}}</p>
                                     <p class="text-dark">{{book.progress}}%</p>
                                     <div class= "progress" >
                                         <div style="width: {{book.progress}}%" class="progress-bar" role="progressbar" aria-valuenow="{{book.progress}}" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div> 
+                                    </div>
                                 </a>
                             </div>
                         </div>
@@ -79,22 +113,6 @@
             </div>
         </div>
     {% endfor %}
-
-    <div class=" container-fluid mx-2 mb-5 row w-100 ">
-        <div class= "col-8 mr-4 bg-light shadow" style="width=60%">
-            <h1 class="mb-2">{{ profile.date_most_pages_read|date:'j M'  }}</h1>
-            <h2 class="ml-4">{{ profile.most_pages_read }} páginas</h2>
-        
-            <h1 class="mb-2">Páginas leídas este mes:</h1> 
-            <h2 class="ml-4">{{profile.pages_this_month }}</h2>
-         </div>   
-        
-    
-        <div class= " col ml-4 bg-light shadow">
-            <h1 class= "mb-2">Promedio de páginas por día </h1>
-            <h2 class= "mb-2 ml-4">{{ profile.average_pages_for_day }} / Día</h2>
-        </div>
-    </div >
 
 </div>
 

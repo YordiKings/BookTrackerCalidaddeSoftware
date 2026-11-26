@@ -118,7 +118,7 @@ class MVT_BookModelTests(TestCase):
         profile = self.user.profile
         profile.pages_this_month = 60
         profile.save()
-        day = timezone.now().day
+        day = timezone.localdate().day  # día local (TIME_ZONE), no el día en UTC
         expected_avg = round(60 / day)
         self.assertEqual(profile.average_pages_for_day(), expected_avg)
 

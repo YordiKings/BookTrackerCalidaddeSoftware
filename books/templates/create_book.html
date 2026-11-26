@@ -3,7 +3,7 @@
 
 <div class="d-flex flex-column justify-content-center flex-wrap rounded" style="width: 100%; max-width: 900px;">
     <div class="d-flex p-2 justify-content-center">
-        <h1>Create Book</h1>
+        <h1>Agregar libro</h1>
     </div>
 
     <!-- Buscador Interactivo de Libros -->
@@ -61,7 +61,12 @@
 
             {{ form.as_p }}
 
-            <button type="submit" class="formButtonColor btn btn-secondary btn-block">Crear Libro</button>
+            <button type="submit" id="createBookSubmit" class="formButtonColor btn btn-secondary btn-block">Crear Libro</button>
+            <!-- Indicador de guardado (H16): guardar puede tardar si se consultan portadas/datos en línea -->
+            <div id="createBookSaving" class="alert alert-info text-center mt-2 mb-0 d-none" role="status" aria-live="polite">
+                <span class="spinner-border spinner-border-sm mr-2" aria-hidden="true"></span>
+                Guardando libro… si no tiene portada se buscan sus datos en línea, esto puede tardar unos segundos.
+            </div>
         </form>
     </div>
 </div>
@@ -217,6 +222,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // Si el usuario modifica las páginas totales con un PDF adjunto, se corrige al valor del PDF
     pagesTotalField.addEventListener('change', applyPdfPages);
     if (formEl) formEl.addEventListener('submit', applyPdfPages);
+
+    // Indicador de "guardando" y bloqueo del botón para evitar envíos dobles (H16)
+    const submitBtn = document.getElementById('createBookSubmit');
+    const savingBox = document.getElementById('createBookSaving');
+    if (formEl && submitBtn && savingBox) {
+        formEl.addEventListener('submit', function() {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Guardando…';
+            savingBox.classList.remove('d-none');
+        });
+        // Si el usuario vuelve con el botón "Atrás", restaurar el botón
+        window.addEventListener('pageshow', function() {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Crear Libro';
+            savingBox.classList.add('d-none');
+        });
+    }
 
     let searchTimeout;
 
