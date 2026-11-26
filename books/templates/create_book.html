@@ -127,8 +127,11 @@
     }
 </style>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
     const searchInput = document.getElementById('gbSearchInput');
     const searchBtn = document.getElementById('gbSearchBtn');
     const resultsDiv = document.getElementById('gbResults');
@@ -157,6 +160,63 @@ document.addEventListener('DOMContentLoaded', function() {
     const titleField = document.getElementById('id_title');
     const autorField = document.getElementById('id_autor');
     const pagesTotalField = document.getElementById('id_pages_total');
+    const pagesReadField = document.getElementById('id_pages_read');
+    const pdfField = document.getElementById('id_pdf_file');
+    const formEl = pagesTotalField ? pagesTotalField.form : null;
+
+    // Páginas reales del PDF adjunto (null si no hay PDF o no se pudo leer).
+    // Cuando existe, "el PDF manda" sobre cualquier otro número de páginas.
+    let pdfPages = null;
+
+    const pdfHint = document.createElement('small');
+    pdfHint.className = 'form-text text-muted d-none';
+    pagesTotalField.parentNode.appendChild(pdfHint);
+
+    function applyPdfPages() {
+        if (!pdfPages) return;
+        pagesTotalField.value = pdfPages;
+        if (pagesReadField && parseInt(pagesReadField.value, 10) > pdfPages) {
+            pagesReadField.value = pdfPages;
+        }
+        pdfHint.textContent = `📄 Detectadas ${pdfPages} páginas en el PDF adjunto. Este valor se ajusta automáticamente al del PDF.`;
+        pdfHint.classList.remove('d-none');
+    }
+
+    function resetPdfPages() {
+        if (pdfPages && parseInt(pagesTotalField.value, 10) === pdfPages) {
+            pagesTotalField.value = '';
+        }
+        pdfPages = null;
+        pdfHint.classList.add('d-none');
+    }
+
+    if (pdfField) {
+        pdfField.addEventListener('change', function() {
+            const file = pdfField.files && pdfField.files[0];
+            if (!file) {
+                resetPdfPages();
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function() {
+                pdfjsLib.getDocument({ data: new Uint8Array(reader.result) }).promise
+                    .then(function(doc) {
+                        pdfPages = doc.numPages;
+                        applyPdfPages();
+                    })
+                    .catch(function() {
+                        // PDF ilegible o protegido: se conserva el valor manual
+                        pdfPages = null;
+                        pdfHint.classList.add('d-none');
+                    });
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // Si el usuario modifica las páginas totales con un PDF adjunto, se corrige al valor del PDF
+    pagesTotalField.addEventListener('change', applyPdfPages);
+    if (formEl) formEl.addEventListener('submit', applyPdfPages);
 
     let searchTimeout;
 
@@ -224,6 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (titleField) titleField.value = book.title || '';
         if (autorField) autorField.value = book.authors || '';
         if (pagesTotalField && book.page_count) pagesTotalField.value = book.page_count;
+        applyPdfPages(); // el PDF adjunto tiene prioridad sobre las páginas del catálogo
 
         // Rellenar campos ocultos para el guardado
         hiddenGbId.value = book.google_books_id || '';
@@ -275,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.gb-result-card').forEach(c => c.classList.remove('selected'));
         if (titleField) titleField.value = '';
         if (autorField) autorField.value = '';
-        if (pagesTotalField) pagesTotalField.value = '';
+        if (pagesTotalField) pagesTotalField.value = pdfPages || '';
     });
 
     searchBtn.addEventListener('click', doSearch);
