@@ -77,3 +77,6 @@ desktop.ini
 
 # Base de datos local
 db.sqlite3
+
+# Instrucciones locales de Claude Code
+CLAUDE.md
