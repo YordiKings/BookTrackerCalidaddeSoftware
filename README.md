@@ -2,7 +2,7 @@
 
 **BookTracker** es una aplicación web integral desarrollada con **Python** y **Django** diseñada para gestionar, dar seguimiento y gamificar el hábito de lectura personal. Permite a los usuarios registrar sus libros, controlar su progreso diario de lectura, calcular metas a corto plazo, subir archivos PDF y portadas, y consultar estadísticas personales.
 
-El sistema incorpora un **buscador predictivo en tiempo real** con enriquecimiento bibliográfico híbrido (**Google Books API** con fallback automático a **Open Library**), un **visor interactivo de PDFs** con sincronización automática de páginas en vivo, políticas de **limpieza automática de almacenamiento** y un panel de métricas ágiles (**Agile Dashboard**) para monitorear el desempeño del equipo de desarrollo a lo largo de los Sprints.
+El sistema incorpora un **buscador predictivo en tiempo real** con enriquecimiento bibliográfico híbrido (**Google Books API** con fallback automático a **Open Library**), un **visor interactivo de PDFs** con sincronización automática de páginas en vivo y políticas de **limpieza automática de almacenamiento**.
 
 ---
 
@@ -52,16 +52,13 @@ El sistema incorpora un **buscador predictivo en tiempo real** con enriquecimien
 - Plantilla pública `.env.example` para despliegues sin exponer claves privadas.
 - Cargador nativo ultraligero en `settings.py` sin dependencias externas pesadas.
 
-### 8. 📈 Agile Dashboard
-- Panel de control integrado con **Chart.js** que visualiza métricas de desarrollo de los Sprints (velocidad, previsibilidad, cobertura de código, lead time y defectos).
-
 ---
 
 ## 🛠️ Tecnologías Utilizadas
 
 - **Backend:** Python 3.12+, Django 6.1+
 - **Base de Datos:** SQLite (desarrollo local con soporte para migraciones automáticas)
-- **Frontend:** HTML5, CSS3 personalizado, Bootstrap 5, Chart.js
+- **Frontend:** HTML5, CSS3 personalizado, Bootstrap 5
 - **Lector PDF:** Mozilla PDF.js v3.11.174
 - **APIs de Libros:** Google Books API v1, Open Library Search API & Covers API
 - **Testing:** Pytest, Django Test Runner, Unittest Mock
@@ -80,8 +77,6 @@ BookTracker/
 │   ├── wsgi.py / asgi.py       # Puntos de entrada para servidores web
 │
 ├── books/                      # Aplicación principal de Django
-│   ├── data/
-│   │   └── metrics.json        # Datos históricos de Sprints para el Agile Dashboard
 │   ├── migrations/             # Migraciones del esquema de base de datos (0001 a 0003)
 │   ├── templates/              # Plantillas HTML con renderizado dinámico
 │   │   ├── base.html           # Layout base con navbar responsiva
@@ -91,8 +86,7 @@ BookTracker/
 │   │   ├── books.html          # Biblioteca con tarjetas, badges y barras de progreso
 │   │   ├── book_detail.html    # Ficha técnica, notas, edición y Visor PDF interactivo
 │   │   ├── create_book.html    # Formulario con buscador predictivo y preview de portada
-│   │   ├── dashboard.html      # Panel personal de lectura y estadísticas del perfil
-│   │   └── agile_dashboard.html# Panel de métricas Scrum/Ágiles
+│   │   └── dashboard.html      # Panel personal de lectura y estadísticas del perfil
 │   ├── admin.py                # Configuración del panel de administración
 │   ├── forms.py                # Formularios Django (BookForm, SignUpForm, SignInForm)
 │   ├── models.py               # Modelos (Book, Profile) y señales de limpieza física

@@ -451,23 +451,3 @@ def signin(request):
         else:
             login(request, user)
             return redirect('books')
-
-
-@login_required
-def agile_dashboard(request):
-    # Ruta hacia el archivo JSON de métricas
-    json_path = os.path.join(settings.BASE_DIR, "books", "data", "metrics.json")
-
-    # Carga de datos dinámicos
-    if os.path.exists(json_path):
-        with open(json_path, "r", encoding="utf-8") as f:
-            metrics_data = json.load(f)
-    else:
-        # Fallback en caso de no encontrar el archivo
-        metrics_data = {"sprints": [], "kpis_summary": {}}
-
-    context = {
-        "metrics": metrics_data,
-        "metrics_json": json.dumps(metrics_data),
-    }
-    return render(request, "agile_dashboard.html", context)
